@@ -1,9 +1,10 @@
 from datetime import timedelta
 from typing import Any
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Body
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-from app.exceptions.errors import EntityAlreadyExistsError
+from app.exceptions.errors import AuthenticationFailed, EntityAlreadyExistsError
+from app.schemas.auth import LoginRequest
 
 from app import schemas, models
 from app.api import deps
@@ -22,7 +23,7 @@ def register(
     if user:
         raise EntityAlreadyExistsError(name="Dados duplicados", message="Usuário já existe")
 
-    if not is_password_secure(user_in.password) or user_in.email == user_in.password
+    if not is_password_secure(user_in.password) or user_in.email == user_in.password:
         raise WeakPasswordError(name="Senha fraca", message="Use pelo menos 8 caracteres, incluindo letras maiúsculas e minúsculas, números e símbolos.")
     
     db_obj = models.User(
@@ -37,12 +38,13 @@ def register(
 
 @router.post("/login", response_model=schemas.token.Token)
 def login(
+    *,
     db: Session = Depends(deps.get_db),
-    form_data: OAuth2PasswordRequestForm = Depends()
-) -> Any:
-    user = db.query(models.User).filter(models.User.email == form_data.username).first()
-    if not user or not security.verify_password(form_data.password, user.password):
-        raise HTTPException(status_code=400, detail="Incorrect email or password")
+    credentials: LoginRequest = Body(...)
+):
+    user = db.query(models.User).filter(models.User.email == credentials.email).first()
+    if not user or not security.verify_password(credentials.password, user.password):
+        raise AuthenticationFailed(name="Erro no login", message="Email ou senha inválida")
     
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     return {

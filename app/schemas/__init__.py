@@ -1,3 +1,4 @@
+from .auth import LoginRequest
 from .user import UserBase, UserCreate, UserUpdate, UserResponse
 from .media import MediaBase, MediaCreate, MediaResponse
 from .analysis import AnalysisBase, AnalysisCreate, AnalysisUpdate, AnalysisResponse
