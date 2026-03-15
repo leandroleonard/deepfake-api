@@ -1,12 +1,11 @@
-from sqlalchemy import Column, String, Integer, DateTime, func
+from sqlalchemy import Column, String, Integer, DateTime, func, text
 from sqlalchemy.orm import relationship
 from app.db.base import Base
-import uuid
 
 class Media(Base):
     __tablename__ = "media"
 
-    id = Column(String(32), primary_key=True, default=lambda: uuid.uuid4().hex)
+    id = Column(String(32), primary_key=True, server_default=text("DEFAULT"))
     location = Column(String, nullable=False)
     size = Column(Integer, nullable=True)
     extension = Column(String(10), nullable=True)

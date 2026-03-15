@@ -1,12 +1,11 @@
-from sqlalchemy import Column, String, Integer, DateTime, func
+from sqlalchemy import Column, String, Integer, DateTime, func, text
 from sqlalchemy.orm import relationship
 from app.db.base import Base
-import uuid
 
 class User(Base):
     __tablename__ = "users"
 
-    id = Column(String(32), primary_key=True, default=lambda: uuid.uuid4().hex)
+    id = Column(String(32), primary_key=True, server_default=text("DEFAULT"))
     name = Column(String(50), nullable=False)
     email = Column(String(50), nullable=False, unique=True)
     password = Column(String, nullable=False)

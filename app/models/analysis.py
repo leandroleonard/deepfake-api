@@ -1,13 +1,12 @@
-from sqlalchemy import Column, String, DateTime, ForeignKey, func, Enum as SAEnum
+from sqlalchemy import Column, String, DateTime, ForeignKey, func, text, Enum as SAEnum
 from sqlalchemy.orm import relationship
 from app.db.base import Base
 from app.enums import MediaTypeEnum, StatusEnum
-import uuid
 
 class Analysis(Base):
     __tablename__ = "analysis"
 
-    id = Column(String(32), primary_key=True, default=lambda: uuid.uuid4().hex)
+    id = Column(String(32), primary_key=True, server_default=text("DEFAULT"))
     user_id = Column(String(32), ForeignKey("users.id"), nullable=False)
     media_type = Column(SAEnum(MediaTypeEnum), default=MediaTypeEnum.image)
     media_id = Column(String(32), ForeignKey("media.id"), nullable=True)
