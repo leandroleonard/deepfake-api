@@ -1,0 +1,20 @@
+[Unit]
+Description=Deepfake Celery Worker
+After=network.target
+Requires=redis-server.service
+
+[Service]
+User=root
+Group=root
+WorkingDirectory=/var/www/html/core
+Environment="PATH=/var/www/html/core/venv/bin"
+
+ExecStart=/var/www/html/core/venv/bin/celery \
+  -A app.core.celery_app.celery_app worker \
+  --loglevel=info
+
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
