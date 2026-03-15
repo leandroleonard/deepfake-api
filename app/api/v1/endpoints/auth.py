@@ -3,6 +3,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
+from app.exceptions.errors import EntityAlreadyExistsError
 
 from app import schemas, models
 from app.api import deps
@@ -19,7 +20,10 @@ def register(
 ) -> Any:
     user = db.query(models.User).filter(models.User.email == user_in.email).first()
     if user:
-        raise HTTPException(status_code=400, detail="User already exists")
+        raise EntityAlreadyExistsError(name="Dados duplicados", message="Usuário já existe")
+
+    if not is_password_secure(user_in.password) or user_in.email == user_in.password
+        raise WeakPasswordError(name="Senha fraca", message="Use pelo menos 8 caracteres, incluindo letras maiúsculas e minúsculas, números e símbolos.")
     
     db_obj = models.User(
         name=user_in.name,
@@ -49,3 +53,18 @@ def login(
 @router.get("/me", response_model=schemas.UserResponse)
 def read_user_me(current_user: models.User = Depends(deps.get_current_user)) -> Any:
     return current_user
+
+
+def is_password_secure(password: str) -> bool:
+    import re
+    if len(password) < 8:
+        return False
+    if not re.search(r"[A-Z]", password):
+        return False
+    if not re.search(r"[a-z]", password):
+        return False
+    if not re.search(r"\d", password):
+        return False
+    if not re.search(r"[!@#$%^&*(),.?\":{}|<>]", password):
+        return False
+    return True
