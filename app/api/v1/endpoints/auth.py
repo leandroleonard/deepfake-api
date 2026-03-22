@@ -3,7 +3,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, status, Body
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-from app.exceptions.errors import AuthenticationFailed, EntityAlreadyExistsError
+from app.exceptions.errors import AuthenticationFailed, EntityAlreadyExistsError, UnauthorizedError,WeakPasswordError
 from app.schemas.auth import LoginRequest
 
 from app import schemas, models
@@ -23,8 +23,8 @@ def register(
     if user:
         raise EntityAlreadyExistsError(name="Dados duplicados", message="Usuário já existe")
 
-    if not is_password_secure(user_in.password) or user_in.email == user_in.password:
-        raise WeakPasswordError(name="Senha fraca", message="Use pelo menos 8 caracteres, incluindo letras maiúsculas e minúsculas, números e símbolos.")
+    # if not is_password_secure(user_in.password) or user_in.email == user_in.password:
+    #     raise WeakPasswordError(name="Senha fraca", message="Use pelo menos 8 caracteres, incluindo letras maiúsculas e minúsculas, números e símbolos.")
     
     db_obj = models.User(
         name=user_in.name,
@@ -47,26 +47,62 @@ def login(
         raise AuthenticationFailed(name="Erro no login", message="Email ou senha inválida")
     
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    
+    access_token = security.create_access_token(
+        user.id, expires_delta=access_token_expires
+    )
+    
+    refresh_token = security.create_refresh_token(user.id)
+
     return {
-        "access_token": security.create_access_token(user.id, expires_delta=access_token_expires),
+        "access_token": access_token,
+        "refresh_token": refresh_token,
         "token_type": "bearer",
     }
+    
 
 @router.get("/me", response_model=schemas.UserResponse)
 def read_user_me(current_user: models.User = Depends(deps.get_current_user)) -> Any:
     return current_user
 
+@router.post("/refresh", response_model=schemas.token.RefreshTokenResponse)
+def refresh_token(
+    body: schemas.token.RefreshTokenRequest,
+    db: Session = Depends(deps.get_db)
+):
+    payload = security.verify_refresh_token(body.refresh_token)
+    if not payload:
+        raise UnauthorizedError(
+            message="Refresh token inválido ou expirado"
+        )
 
-def is_password_secure(password: str) -> bool:
-    import re
-    if len(password) < 8:
-        return False
-    if not re.search(r"[A-Z]", password):
-        return False
-    if not re.search(r"[a-z]", password):
-        return False
-    if not re.search(r"\d", password):
-        return False
-    if not re.search(r"[!@#$%^&*(),.?\":{}|<>]", password):
-        return False
-    return True
+    user_id = payload.get("sub")
+    if not user_id:
+        raise UnauthorizedError(
+            message="Token inválido"
+        )
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise AuthenticationFailed(
+            message="Utilizador não encontrado"
+        )
+
+    return schemas.RefreshTokenResponse(
+        access_token=security.create_access_token({"sub": str(user.id)}),
+        refresh_token=security.create_refresh_token({"sub": str(user.id)}),
+    )
+
+# def is_password_secure(password: str) -> bool:
+#     import re
+#     if len(password) < 8:
+#         return False
+#     if not re.search(r"[A-Z]", password):
+#         return False
+#     if not re.search(r"[a-z]", password):
+#         return False
+#     if not re.search(r"\d", password):
+#         return False
+#     if not re.search(r"[!@#$%^&*(),.?\":{}|<>]", password):
+#         return False
+#     return True
