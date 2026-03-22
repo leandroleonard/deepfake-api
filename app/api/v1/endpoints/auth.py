@@ -3,7 +3,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, status, Body
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-from app.exceptions.errors import AuthenticationFailed, EntityAlreadyExistsError, UnauthorizedError,WeakPasswordError
+from app.exceptions.errors import AuthenticationFailed, BadRequestError, EntityAlreadyExistsError, UnauthorizedError,WeakPasswordError
 from app.schemas.auth import LoginRequest
 
 from app import schemas, models
@@ -92,6 +92,26 @@ def refresh_token(
         access_token=security.create_access_token({"sub": str(user.id)}),
         refresh_token=security.create_refresh_token({"sub": str(user.id)}),
     )
+    
+@router.put("/profile")
+@router.put("/profile")
+def update_profile(
+    body: schemas.UpdateProfileRequest,
+    current_user: models.User = Depends(deps.get_current_user),
+    db: Session = Depends(deps.get_db)
+):
+    if not security.verify_password(body.current_password, current_user.password):
+        raise BadRequestError(message="Senha incorreta")
+
+    current_user.name = body.name
+    current_user.email = body.email
+
+    if body.new_password:
+        current_user.password = security.get_password_hash(body.new_password)
+
+    db.commit()
+    db.refresh(current_user)
+    return current_user
 
 # def is_password_secure(password: str) -> bool:
 #     import re
