@@ -92,8 +92,7 @@ def store(
     db.refresh(analysis)
     db.refresh(media)
 
-    # Dispara o job em background com Celery — equivalente ao ProcessDeepfakeJob::dispatch()
-    process_deepfake_analysis.delay(analysis.id)  # 👈 AGORA COM CELERY
+    process_deepfake_analysis.delay(analysis.id) 
 
     return AnalysisDetailResponse(
         id=analysis.id,
@@ -104,7 +103,6 @@ def store(
         results=[],
     )
 
-# GET /analysis/{id} — show
 @router.get("/{id}", response_model=AnalysisDetailResponse)
 def show(
     id: str,
