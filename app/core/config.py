@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     MODELS_DIR: Path = BASE_DIR / "models"
 
     DEEPFAKE_PYTHON: str = "python3"
-    DEEPFAKE_SCRIPT: Path = BASE_DIR / "deepfake_ai/model/predict.py"
+    DEEPFAKE_SCRIPT: Path = BASE_DIR / "deepfake_ai/predict.py"
 
     CELERY_RESULT_BACKEND: str = "redis://localhost:6379/1"
     CELERY_TASK_ALWAYS_EAGER: bool = False

@@ -18,3 +18,4 @@ celery_app.conf.update(
 import app.services.deepfake_tasks
 import app.services.illumination_task
 import app.services.jpeg_artifact_task
+import app.services.face_swap_task
