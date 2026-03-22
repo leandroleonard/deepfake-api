@@ -38,3 +38,7 @@ class BadRequestError(DeepFakeApiError):
 class WeakPasswordError(DeepFakeApiError):
     def __init__(self, message: str, name: str = "WeakPassword"):
         super().__init__(message=message, name=name, status=403)
+        
+class PaymentRequiredError(DeepFakeApiError):
+    def __init__(self, message: str, name: str = "PaymentRequired"):
+        super().__init__(message=message, name=name, status=402)
