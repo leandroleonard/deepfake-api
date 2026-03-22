@@ -24,4 +24,5 @@ def status():
 
 # Serve os arquivos de upload como estáticos
 app.mount("/uploads", StaticFiles(directory="app/uploads"), name="uploads")
+app.mount("/uploads/heatmaps", StaticFiles(directory="app/uploads/heatmaps"), name="heatmaps")
 app.include_router(api_router, prefix="/api/v1")

@@ -17,6 +17,7 @@ from app.schemas.analysis import (
 from app.enums import MediaTypeEnum, StatusEnum
 from app.exceptions.errors import EntityDoesNotExistError, BadRequestError
 from app.services.deepfake_tasks import process_deepfake_analysis
+from app.services.illumination_task import process_illumination_analysis
 
 router = APIRouter()
 
@@ -92,7 +93,8 @@ def store(
     db.refresh(analysis)
     db.refresh(media)
 
-    process_deepfake_analysis.delay(analysis.id) 
+    process_deepfake_analysis.delay(analysis.id)
+    process_illumination_analysis.delay(analysis.id)
 
     return AnalysisDetailResponse(
         id=analysis.id,

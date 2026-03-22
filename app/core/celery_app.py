@@ -16,3 +16,4 @@ celery_app.conf.update(
 )
 
 import app.services.deepfake_tasks
+import app.services.illumination_task
