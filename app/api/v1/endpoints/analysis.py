@@ -26,7 +26,7 @@ from app.services.metadata_ai_task import process_metadata_ai_analysis
 router = APIRouter()
 
 ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png", "mp4", "mov"}
-MAX_FILE_SIZE = 512 * 1024
+MAX_FILE_SIZE = 5120 * 1024
 UPLOAD_DIR = "app/uploads"
 
 def get_media_url(location: str) -> str:
@@ -56,7 +56,7 @@ def save_upload_file(upload_file: UploadFile) -> tuple[str, int, str]:
     if file_size > MAX_FILE_SIZE:
         os.remove(file_path)
         raise BadRequestError(
-            message="Arquivo muito grande. Máximo permitido: 5MB",
+            message=f"Arquivo muito grande. Máximo permitido: 5MB",
             name="FileTooLarge"
         )
 
