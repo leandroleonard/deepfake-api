@@ -16,6 +16,15 @@ from app.models.analysis import Analysis
 from app.models.result import Result
 
 
+def _resolve_final_status(db: Session, analysis_id: str) -> StatusEnum:
+    has_results = (
+        db.query(Result)
+        .filter(Result.analysis_id == analysis_id)
+        .first()
+    ) is not None
+    return StatusEnum.completed if has_results else StatusEnum.failed
+
+
 @celery_app.task(name="process_deepfake_analysis", bind=True, acks_late=True)
 def process_deepfake_analysis(self, analysis_id: str) -> None:
     db: Session = SessionLocal()
@@ -48,7 +57,7 @@ def process_deepfake_analysis(self, analysis_id: str) -> None:
 
         if not os.path.exists(file_path):
             logger.error(f"[analysis {analysis_id}] File not found: {file_path}")
-            analysis.status = StatusEnum.failed
+            analysis.status = _resolve_final_status(db, analysis_id)
             db.commit()
             return
 
@@ -79,13 +88,13 @@ def process_deepfake_analysis(self, analysis_id: str) -> None:
                 f"[analysis {analysis_id}] Script exited with code {proc.returncode}.\n"
                 f"stdout: {output[:300]}\nstderr: {err[:300]}"
             )
-            analysis.status = StatusEnum.failed
+            analysis.status = _resolve_final_status(db, analysis_id)
             db.commit()
             return
 
         if not output:
             logger.error(f"[analysis {analysis_id}] Script returned empty stdout. stderr: {err[:300]}")
-            analysis.status = StatusEnum.failed
+            analysis.status = _resolve_final_status(db, analysis_id)
             db.commit()
             return
 
@@ -93,7 +102,7 @@ def process_deepfake_analysis(self, analysis_id: str) -> None:
             result_data = json.loads(output)
         except json.JSONDecodeError:
             logger.error(f"[analysis {analysis_id}] Failed to parse JSON. Raw output: {output[:300]}")
-            analysis.status = StatusEnum.failed
+            analysis.status = _resolve_final_status(db, analysis_id)
             db.commit()
             return
 
@@ -113,12 +122,12 @@ def process_deepfake_analysis(self, analysis_id: str) -> None:
     except subprocess.TimeoutExpired:
         logger.error(f"[analysis {analysis_id}] Script timed out after {60 * 20}s")
         if analysis:
-            analysis.status = StatusEnum.failed
+            analysis.status = _resolve_final_status(db, analysis_id)
             db.commit()
     except Exception as e:
         logger.exception(f"[analysis {analysis_id}] Unexpected error: {e}")
         if analysis:
-            analysis.status = StatusEnum.failed
+            analysis.status = _resolve_final_status(db, analysis_id)
             db.commit()
         raise
     finally:

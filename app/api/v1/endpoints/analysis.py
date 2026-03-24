@@ -110,10 +110,11 @@ def store(
         db.refresh(media)
         db.refresh(current_user)
 
-        # process_deepfake_analysis.delay(analysis.id)
         process_illumination_analysis.delay(analysis.id, analysis.media_type)
         process_face_swap_analysis.delay(analysis.id, analysis.media_type)
         process_metadata_ai_analysis.delay(analysis.id)
+        
+        process_deepfake_analysis.delay(analysis.id)
         
         if analysis.media_type == 'image':
             process_jpeg_artifact_analysis.delay(analysis.id)
