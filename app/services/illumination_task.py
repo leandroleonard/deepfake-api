@@ -24,11 +24,6 @@ def _save_heatmap(img_array: np.ndarray, suffix: str) -> str:
     return f"/uploads/heatmaps/{filename}"
 
 
-def _is_video(file_path: str) -> bool:
-    ext = os.path.splitext(file_path)[1].lower()
-    return ext in {".mp4", ".mov", ".avi", ".mkv", ".webm", ".flv"}
-
-
 def _extract_frames(video_path: str, num_frames: int = MIN_FRAMES) -> list[np.ndarray]:
     """
     Extrai `num_frames` frames distribuídos uniformemente ao longo do vídeo.
@@ -177,7 +172,7 @@ def analyze_illumination_video(video_path: str, num_frames: int = MIN_FRAMES) ->
 
 
 @celery_app.task(name="process_illumination_analysis")
-def process_illumination_analysis(analysis_id: str):
+def process_illumination_analysis(analysis_id: str, media_type: str):
     db: Session = SessionLocal()
     started_at = datetime.utcnow()
 
@@ -189,10 +184,10 @@ def process_illumination_analysis(analysis_id: str):
         media      = analysis.media
         file_path  = os.path.join(UPLOADS_DIR, media.location)
 
-        if analysis.media_type == 'video':
-            result_data = analyze_illumination_video(file_path)
-        else:
+        if media_type == 'image':
             result_data = analyze_illumination_image(file_path)
+        else:
+            result_data = analyze_illumination_video(file_path)
 
         db.add(Result(
             analysis_id=analysis_id,
