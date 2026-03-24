@@ -110,11 +110,11 @@ def store(
         db.refresh(media)
         db.refresh(current_user)
 
-        process_deepfake_analysis.delay(analysis.id)
+        # process_deepfake_analysis.delay(analysis.id)
         process_illumination_analysis.delay(analysis.id)
-        process_jpeg_artifact_analysis.delay(analysis.id)
-        process_face_swap_analysis.delay(analysis.id)
-        process_metadata_ai_analysis.delay(analysis.id)
+        # process_jpeg_artifact_analysis.delay(analysis.id)
+        # process_face_swap_analysis.delay(analysis.id)
+        # process_metadata_ai_analysis.delay(analysis.id)
 
         return AnalysisDetailResponse(
             id=analysis.id,
