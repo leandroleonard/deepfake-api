@@ -1,7 +1,10 @@
+import logging
 import json
 import os
 import subprocess
 from datetime import datetime, timezone
+
+logger = logging.getLogger(__name__)
 
 from sqlalchemy.orm import Session, joinedload
 
@@ -27,9 +30,11 @@ def process_deepfake_analysis(self, analysis_id: str) -> None:
         )
 
         if not analysis or not analysis.media:
+            logger.warning(f"[analysis {analysis_id}] Not found or has no media. Skipping.")
             return
 
         if analysis.status != StatusEnum.pending:
+            logger.warning(f"[analysis {analysis_id}] Status is '{analysis.status}', expected 'pending'. Skipping.")
             return
 
         analysis.status = StatusEnum.processing
@@ -37,9 +42,12 @@ def process_deepfake_analysis(self, analysis_id: str) -> None:
 
         media = analysis.media
 
-        file_path = os.path.join(settings.UPLOAD_DIR, media.location)
+        UPLOAD_DIR = "app/uploads"
+
+        file_path = os.path.join(UPLOAD_DIR, media.location)
 
         if not os.path.exists(file_path):
+            logger.error(f"[analysis {analysis_id}] File not found: {file_path}")
             analysis.status = StatusEnum.failed
             db.commit()
             return
@@ -63,12 +71,20 @@ def process_deepfake_analysis(self, analysis_id: str) -> None:
         output = (proc.stdout or "").strip()
         err = (proc.stderr or "").strip()
 
+        if err:
+            logger.warning(f"[analysis {analysis_id}] stderr:\n{err}")
+
         if proc.returncode != 0:
+            logger.error(
+                f"[analysis {analysis_id}] Script exited with code {proc.returncode}.\n"
+                f"stdout: {output[:300]}\nstderr: {err[:300]}"
+            )
             analysis.status = StatusEnum.failed
             db.commit()
             return
 
         if not output:
+            logger.error(f"[analysis {analysis_id}] Script returned empty stdout. stderr: {err[:300]}")
             analysis.status = StatusEnum.failed
             db.commit()
             return
@@ -76,6 +92,7 @@ def process_deepfake_analysis(self, analysis_id: str) -> None:
         try:
             result_data = json.loads(output)
         except json.JSONDecodeError:
+            logger.error(f"[analysis {analysis_id}] Failed to parse JSON. Raw output: {output[:300]}")
             analysis.status = StatusEnum.failed
             db.commit()
             return
@@ -94,10 +111,12 @@ def process_deepfake_analysis(self, analysis_id: str) -> None:
         db.commit()
 
     except subprocess.TimeoutExpired:
+        logger.error(f"[analysis {analysis_id}] Script timed out after {60 * 20}s")
         if analysis:
             analysis.status = StatusEnum.failed
             db.commit()
-    except Exception:
+    except Exception as e:
+        logger.exception(f"[analysis {analysis_id}] Unexpected error: {e}")
         if analysis:
             analysis.status = StatusEnum.failed
             db.commit()

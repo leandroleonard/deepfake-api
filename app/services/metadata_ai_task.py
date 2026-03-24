@@ -14,6 +14,8 @@ UPLOADS_DIR = os.getenv("UPLOADS_DIR", "app/uploads")
 
 AI_KEYWORDS = [
     "openai",
+    "OpenAI-API"
+    "open-ai",
     "chatgpt",
     "dall-e",
     "dalle",
@@ -103,16 +105,13 @@ def _flatten_metadata(meta: Dict[str, Any]) -> List[Tuple[str, str]]:
         elif isinstance(v, str):
             items.append((k, v))
         elif isinstance(v, list):
-            # lista de strings normalmente
             try:
                 items.append((k, " | ".join([str(x) for x in v[:50]])))
             except Exception:
                 continue
         elif isinstance(v, dict):
-            # raro no exiftool json
             items.append((k, json.dumps(v)[:5000]))
         else:
-            # ignora tipos estranhos
             continue
     return items
 
@@ -141,7 +140,6 @@ def _find_ai_signatures(meta: Dict[str, Any]) -> Dict[str, Any]:
         tag_short = tag.split(":")[-1]  # "XMP:Software" -> "Software"
         tag_is_suspicious = any(h.lower() in tag_short.lower() for h in SUSPICIOUS_TAG_HINTS)
 
-        # Procura sempre, mas prioriza tags suspeitas (não limita — só dá contexto)
         for kw, rx in kw_patterns:
             if rx.search(value):
                 excerpt = value.strip()
@@ -202,7 +200,6 @@ def process_metadata_ai_analysis(analysis_id: str):
                 },
             }
         else:
-            # Não significa "REAL" — só que não encontrou assinatura
             result_data = {
                 "prediction": "UNKNOWN",
                 "confidence": 0.0,
