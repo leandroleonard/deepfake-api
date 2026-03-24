@@ -22,6 +22,7 @@ from app.services.illumination_task import process_illumination_analysis
 from app.services.jpeg_artifact_task import process_jpeg_artifact_analysis
 from app.services.face_swap_task import process_face_swap_analysis
 from app.services.metadata_ai_task import process_metadata_ai_analysis
+from app.services.face_detector import media_has_face
 
 router = APIRouter()
 
@@ -85,11 +86,7 @@ def store(
     )
 
     try:
-        media = Media(
-            location=filename,
-            size=file_size,
-            extension=extension,
-        )
+        media = Media(location=filename, size=file_size, extension=extension)
         db.add(media)
         db.flush()
 
@@ -105,19 +102,22 @@ def store(
         db.add(current_user)
 
         db.commit()
-        
         db.refresh(analysis)
         db.refresh(media)
         db.refresh(current_user)
 
-        process_illumination_analysis.delay(analysis.id, analysis.media_type)
-        process_face_swap_analysis.delay(analysis.id, analysis.media_type)
-        process_metadata_ai_analysis.delay(analysis.id)
-        
+        file_path  = os.path.join("app/uploads", media.location)
+        has_face   = media_has_face(file_path)
+
         process_deepfake_analysis.delay(analysis.id)
-        
-        if analysis.media_type == 'image':
+        process_metadata_ai_analysis.delay(analysis.id)
+
+        if media_type == MediaTypeEnum.image:
             process_jpeg_artifact_analysis.delay(analysis.id)
+
+        if has_face:
+            process_illumination_analysis.delay(analysis.id, analysis.media_type)
+            process_face_swap_analysis.delay(analysis.id, analysis.media_type)
 
         return AnalysisDetailResponse(
             id=analysis.id,
@@ -130,9 +130,7 @@ def store(
 
     except Exception as e:
         db.rollback()
-        raise DeepFakeApiError(
-            message=f"Erro ao processar análise: {str(e)}"
-        )
+        raise DeepFakeApiError(message=f"Erro ao processar análise: {str(e)}")
 
 @router.get("/{id}", response_model=AnalysisDetailResponse)
 def show(

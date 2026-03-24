@@ -10,6 +10,8 @@ from app.db.session import SessionLocal
 from app.models.analysis import Analysis
 from app.models.result import Result
 
+from app.enums import MediaTypeEnum
+
 UPLOADS_DIR = os.getenv("UPLOADS_DIR", "app/uploads")
 HEATMAPS_DIR = os.path.join(UPLOADS_DIR, "heatmaps")
 os.makedirs(HEATMAPS_DIR, exist_ok=True)
@@ -176,7 +178,7 @@ def process_face_swap_analysis(analysis_id: str, media_type: str):
         media     = analysis.media
         file_path = os.path.join(UPLOADS_DIR, media.location)
 
-        if media_type == 'image':
+        if media_type == MediaTypeEnum.image:
             result_data = analyze_face_swap_image(file_path)
         else:
             result_data = analyze_face_swap_video(file_path)

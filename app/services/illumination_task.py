@@ -184,7 +184,7 @@ def process_illumination_analysis(analysis_id: str, media_type: str):
         media      = analysis.media
         file_path  = os.path.join(UPLOADS_DIR, media.location)
 
-        if media_type == 'image':
+        if media_type == MediaTypeEnum.image:
             result_data = analyze_illumination_image(file_path)
         else:
             result_data = analyze_illumination_video(file_path)
