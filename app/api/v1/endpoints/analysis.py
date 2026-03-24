@@ -23,6 +23,7 @@ from app.services.jpeg_artifact_task import process_jpeg_artifact_analysis
 from app.services.face_swap_task import process_face_swap_analysis
 from app.services.metadata_ai_task import process_metadata_ai_analysis
 from app.services.face_detector import media_has_face
+from app.services.clip_tasks import process_clip_analysis
 
 router = APIRouter()
 
@@ -111,6 +112,7 @@ def store(
 
         process_deepfake_analysis.delay(analysis.id)
         process_metadata_ai_analysis.delay(analysis.id)
+        process_clip_analysis.delay(analysis.id)
 
         if media_type == MediaTypeEnum.image:
             process_jpeg_artifact_analysis.delay(analysis.id)

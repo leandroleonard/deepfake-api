@@ -123,11 +123,33 @@ def process_deepfake_analysis(self, analysis_id: str) -> None:
         logger.error(f"[analysis {analysis_id}] Script timed out after {60 * 20}s")
         if analysis:
             analysis.status = _resolve_final_status(db, analysis_id)
+            
+            db.add(
+                Result(
+                    analysis_id=analysis.id,
+                    type="deepfake_detection",
+                    result={"error": f"[analysis {analysis_id}] Script timed out after {60 * 20}s"},  
+                    started_at=started_at,
+                    finished_at=datetime.now(timezone.utc),
+                )
+            )
+                
             db.commit()
     except Exception as e:
         logger.exception(f"[analysis {analysis_id}] Unexpected error: {e}")
         if analysis:
             analysis.status = _resolve_final_status(db, analysis_id)
+            
+            db.add(
+                Result(
+                    analysis_id=analysis.id,
+                    type="deepfake_detection",
+                    result={"error": f"[analysis {analysis_id}] Unexpected error: {e}"},  
+                    started_at=started_at,
+                    finished_at=datetime.now(timezone.utc),
+                )
+            )
+            
             db.commit()
         raise
     finally:
