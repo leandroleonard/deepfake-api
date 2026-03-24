@@ -14,7 +14,7 @@ UPLOADS_DIR = os.getenv("UPLOADS_DIR", "app/uploads")
 HEATMAPS_DIR = os.path.join(UPLOADS_DIR, "heatmaps")
 os.makedirs(HEATMAPS_DIR, exist_ok=True)
 
-MIN_FRAMES = 5  # mínimo de frames a extrair de vídeos
+MIN_FRAMES = 5  
 
 
 def _save_heatmap(img_array: np.ndarray, suffix: str) -> str:
@@ -41,7 +41,6 @@ def _extract_frames(video_path: str, num_frames: int = MIN_FRAMES) -> list[np.nd
     if total_frames <= 0:
         raise ValueError("Vídeo sem frames detectados.")
 
-    # Distribui os índices uniformemente (evita pegar só o início)
     indices = np.linspace(0, total_frames - 1, num=num_frames, dtype=int)
 
     frames = []
@@ -56,7 +55,7 @@ def _extract_frames(video_path: str, num_frames: int = MIN_FRAMES) -> list[np.nd
     if not frames:
         raise ValueError("Nenhum frame pôde ser lido do vídeo.")
 
-    return frames  # lista de (frame_index, np.ndarray)
+    return frames  
 
 
 def _analyze_single_frame(img: np.ndarray) -> dict:
@@ -100,7 +99,6 @@ def _analyze_single_frame(img: np.ndarray) -> dict:
         "highlight_score":  round(highlight_score, 4),
         "gradient_score":   round(gradient_score, 4),
         "regions_analyzed": int(np.sum(shadow_mask > 0) + np.sum(highlight_mask > 0)),
-        # arrays para gerar imagens (não são serializados para JSON)
         "_heatmap":  heatmap_colored,
         "_original": img,
     }
@@ -136,10 +134,6 @@ def analyze_illumination_image(image_path: str) -> dict:
 
 
 def analyze_illumination_video(video_path: str, num_frames: int = MIN_FRAMES) -> dict:
-    """
-    Análise de iluminação para vídeo.
-    Extrai frames, analisa cada um e retorna média + evidência por frame.
-    """
     frames = _extract_frames(video_path, num_frames)
 
     frame_results = []
@@ -148,7 +142,6 @@ def analyze_illumination_video(video_path: str, num_frames: int = MIN_FRAMES) ->
     for frame_idx, img in frames:
         r = _analyze_single_frame(img)
 
-        # Para vídeo: só salva lighting_evidence por frame (sem overlay)
         evidence_path = _save_heatmap(r["_heatmap"], f"lighting_evidence_f{frame_idx}")
 
         frame_results.append({
@@ -159,7 +152,7 @@ def analyze_illumination_video(video_path: str, num_frames: int = MIN_FRAMES) ->
             "shadow_score":     r["shadow_score"],
             "highlight_score":  r["highlight_score"],
             "gradient_score":   r["gradient_score"],
-            "lighting_evidence": evidence_path,  # frontend vai renderizar automaticamente
+            "lighting_evidence": evidence_path, 
         })
         confidences.append(r["confidence"])
 
@@ -179,7 +172,6 @@ def analyze_illumination_video(video_path: str, num_frames: int = MIN_FRAMES) ->
             "max_confidence":  max_confidence,
             "avg_confidence":  avg_confidence,
         },
-        # Lista de frames — o frontend vai iterar e mostrar cada lighting_evidence
         "frames": frame_results,
     }
 
@@ -197,7 +189,6 @@ def process_illumination_analysis(analysis_id: str):
         media      = analysis.media
         file_path  = os.path.join(UPLOADS_DIR, media.location)
 
-        # Decide se é vídeo ou imagem
         if analysis.media_type == 'video':
             result_data = analyze_illumination_video(file_path)
         else:
