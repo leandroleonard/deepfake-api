@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.db.session import SessionLocal
 from app.models.analysis import Analysis
 from app.models.result import Result
+from app.enums import MediaTypeEnum
 
 UPLOADS_DIR = os.getenv("UPLOADS_DIR", "app/uploads")
 HEATMAPS_DIR = os.path.join(UPLOADS_DIR, "heatmaps")
