@@ -29,6 +29,13 @@ class Settings(BaseSettings):
 
     CELERY_RESULT_BACKEND: str = "redis://localhost:6379/1"
     CELERY_TASK_ALWAYS_EAGER: bool = False
+    
+    SMTP_HOST: str = "smtp.gmail.com"
+    SMTP_PORT: int = 587
+    SMTP_USER: str
+    SMTP_PASSWORD: str
+    SMTP_FROM: str
+    FRONTEND_URL: str = "http://guisaudavel.fit"
 
     model_config = SettingsConfigDict(
         env_file=".env",

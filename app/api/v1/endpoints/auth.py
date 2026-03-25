@@ -1,15 +1,20 @@
-from datetime import timedelta
+from datetime import datetime, timezone, timedelta
 from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, status, Body
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from app.exceptions.errors import AuthenticationFailed, BadRequestError, EntityAlreadyExistsError, UnauthorizedError,WeakPasswordError
-from app.schemas.auth import LoginRequest
+from app.schemas.auth import LoginRequest, ForgotPasswordRequest, ResetPasswordRequest
 
 from app import schemas, models
 from app.api import deps
 from app.core import security
 from app.core.config import settings
+
+import secrets
+from app.models.password_reset_token import PasswordResetToken
+from app.core.email import send_reset_email
+from app.core.security import get_password_hash
 
 router = APIRouter()
 
@@ -126,3 +131,60 @@ def update_profile(
 #     if not re.search(r"[!@#$%^&*(),.?\":{}|<>]", password):
 #         return False
 #     return True
+
+@router.post("/forgot-password", status_code=200)
+def forgot_password(payload: ForgotPasswordRequest, db: Session = Depends(deps.get_db)):
+    user = db.query(models.User).filter(models.User.email == payload.email).first()
+
+    if not user:
+        return {"message": "Se o email existir, receberás um link de recuperação."}
+
+    db.query(PasswordResetToken).filter(
+        PasswordResetToken.user_id == user.id,
+        PasswordResetToken.used_at == None,
+    ).delete()
+
+    token      = secrets.token_urlsafe(48)
+    expires_at = datetime.now(timezone.utc) + timedelta(minutes=30)
+
+    db.add(PasswordResetToken(
+        user_id    = user.id,
+        token      = token,
+        expires_at = expires_at,
+    ))
+    db.commit()
+
+    reset_link = f"{settings.FRONTEND_URL}/reset-password?token={token}"
+    send_reset_email(user.email, reset_link)
+
+    return {"message": "Se o email existir, receberás um link de recuperação."}
+
+
+@router.post("/reset-password", status_code=200)
+def reset_password(payload: ResetPasswordRequest, db: Session = Depends(deps.get_db)):
+    if payload.password != payload.password_confirmation:
+        raise HTTPException(status_code=422, detail="As senhas não coincidem.")
+
+    reset_token = (
+        db.query(PasswordResetToken)
+        .filter(PasswordResetToken.token == payload.token)
+        .first()
+    )
+
+    if not reset_token:
+        raise HTTPException(status_code=400, detail="Token inválido.")
+
+    if reset_token.used_at is not None:
+        raise HTTPException(status_code=400, detail="Token já utilizado.")
+
+    if reset_token.expires_at < datetime.now(timezone.utc):
+        raise HTTPException(status_code=400, detail="Token expirado.")
+
+    user          = reset_token.user
+    user.password = get_password_hash(payload.password)
+
+    reset_token.used_at = datetime.now(timezone.utc)
+
+    db.commit()
+
+    return {"message": "Senha redefinida com sucesso."}
